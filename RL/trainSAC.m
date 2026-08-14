@@ -9,7 +9,7 @@ close all;
 obsInfo = rlNumericSpec([6 1]);
 
 obsInfo.Name = ...
-    "Normalized tank states and errors";
+    "Normalized tank states and tracking errors";
 
 %% ========================================
 % 2. Action specification
@@ -24,7 +24,7 @@ actInfo.Name = ...
     "Normalized pump commands";
 
 %% ========================================
-% 3. Create RL environment
+% 3. Create environment
 % =========================================
 
 env = rlFunctionEnv( ...
@@ -36,33 +36,47 @@ env = rlFunctionEnv( ...
 disp("RL environment created.");
 
 %% ========================================
-% 4. Create SAC agent
+% 4. Create NEW SAC agent
 % =========================================
 
 agent = rlSACAgent( ...
     obsInfo, ...
     actInfo);
 
-disp("SAC agent created.");
+disp("New SAC agent created.");
 
 %% ========================================
 % 5. Timing
 % =========================================
 
-% RL controller decides every 0.5 s
 TsAgent = 0.5;
 
-% One episode represents 200 seconds
+% Keep 200 s first
 Tf = 200;
 
 maxSteps = round(Tf/TsAgent);
 
-fprintf( ...
-    "Steps per episode: %d\n", ...
-    maxSteps);
+fprintf('\n');
+fprintf('Episode duration   = %.1f s\n',Tf);
+fprintf('RL sample time     = %.2f s\n',TsAgent);
+fprintf('Steps per episode  = %d\n',maxSteps);
+fprintf('\n');
 
 %% ========================================
-% 6. Training options
+% 6. Folder for candidate agents
+% =========================================
+
+saveFolder = fullfile(pwd,"SavedAgents");
+
+if ~exist(saveFolder,"dir")
+    mkdir(saveFolder);
+end
+
+fprintf('Candidate agents will be saved in:\n');
+fprintf('%s\n\n',saveFolder);
+
+%% ========================================
+% 7. Training options
 % =========================================
 
 trainOpts = rlTrainingOptions( ...
@@ -70,10 +84,14 @@ trainOpts = rlTrainingOptions( ...
     MaxStepsPerEpisode=maxSteps, ...
     ScoreAveragingWindowLength=20, ...
     Verbose=true, ...
-    Plots="training-progress");
+    Plots="training-progress", ...
+    ...
+    SaveAgentCriteria="AverageReward", ...
+    SaveAgentValue=-70, ...
+    SaveAgentDirectory=saveFolder);
 
 %% ========================================
-% 7. Start training
+% 8. Start training
 % =========================================
 
 trainingStats = train( ...
@@ -82,15 +100,14 @@ trainingStats = train( ...
     trainOpts);
 
 %% ========================================
-% 8. Save trained controller
+% 9. Save FINAL agent separately
 % =========================================
 
 save( ...
-    "trainedSAC_v2.mat", ...
+    "trainedSAC_final.mat", ...
     "agent", ...
     "trainingStats");
 
 disp("Training finished.");
-
-disp( ...
-    "Saved as trainedSAC_v2.mat");
+disp("Final agent saved as trainedSAC_final.mat");
+disp("Candidate agents are inside SavedAgents/");

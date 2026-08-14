@@ -4,8 +4,6 @@ clc;
 %% ========================================
 % Observation specification
 %
-% Observation:
-%
 % [ h1/60
 %   h2/60
 %   h3/60
@@ -17,17 +15,13 @@ clc;
 obsInfo = rlNumericSpec([6 1]);
 
 obsInfo.Name = ...
-    "Normalized tank states and errors";
+    "Normalized tank states and tracking errors";
 
 %% ========================================
 % Action specification
 %
-% SAC action:
-%
-% [a1
-%  a2]
-%
-% each in [-1,1]
+% SAC outputs normalized pump commands
+% in [-1,1]
 % =========================================
 
 actInfo = rlNumericSpec( ...
@@ -51,7 +45,7 @@ env = rlFunctionEnv( ...
 disp("RL environment created.");
 
 %% ========================================
-% Validate environment
+% Validate
 % =========================================
 
 validateEnvironment(env);

@@ -3,15 +3,23 @@ clc;
 close all;
 
 %% ========================================
-% Load trained controller
+% Load trained SAC
 % =========================================
 
 load( ...
-    "trainedSAC_v2.mat", ...
+    "trainedSAC_realSmooth.mat", ...
     "agent");
 
 %% ========================================
-% Parameters
+% Real calibrated parameters
+% =========================================
+
+az = [0.4191 0.7860 0.4639];
+
+Qmax = 85.0;
+
+%% ========================================
+% Timing
 % =========================================
 
 TsPlant = 0.05;
@@ -20,21 +28,19 @@ TsAgent = 0.5;
 
 Tf = 200;
 
-Qmax = 85;
-
-az = [0.5 0.5 0.5];
-
 N = round(Tf/TsPlant);
 
 Nhold = round(TsAgent/TsPlant);
 
 %% ========================================
-% Initial state
+% Initial condition
 % =========================================
 
 x = [10;10;10];
 
-%% Desired water levels
+%% ========================================
+% Reference
+% =========================================
 
 ref = [30;10;20];
 
@@ -46,7 +52,9 @@ X = zeros(3,N);
 
 U = zeros(2,N);
 
-%% Initial control
+E = zeros(3,N);
+
+%% Initial pump command
 
 u = [0;0];
 
@@ -56,24 +64,30 @@ u = [0;0];
 
 for k = 1:N
 
-    %% Save state
+    %% Save current state
 
     X(:,k) = x;
 
+    %% Tracking error
+
+    e = ref - x;
+
+    E(:,k) = e;
+
     %% ====================================
-    % Update controller every 0.5 seconds
+    % SAC update every 0.5 s
     % =====================================
 
     if mod(k-1,Nhold) == 0
 
-        e = ref - x;
+        %% Normalized observation
 
         obs = [
             x/60;
             e/30
         ];
 
-        %% Ask SAC actor
+        %% Get action
 
         action = getAction( ...
             agent, ...
@@ -93,22 +107,22 @@ for k = 1:N
 
         a = double(a(:));
 
-        %% Safety clipping
+        %% Clamp normalized action
 
         a = min(max(a,-1),1);
 
-        %% Convert to pump flow
+        %% Convert to physical pump flow
 
         u = (Qmax/2)*(a + 1);
 
     end
 
-    %% Save pump command
+    %% Save control
 
     U(:,k) = u;
 
     %% ====================================
-    % Simulate one physical step
+    % Plant simulation
     % =====================================
 
     x = tankEnvironment( ...
@@ -125,7 +139,7 @@ end
 t = (0:N-1)*TsPlant;
 
 %% ========================================
-% Plot water levels
+% Plot 1: Water levels
 % =========================================
 
 figure;
@@ -133,51 +147,40 @@ figure;
 plot( ...
     t, ...
     X(1,:), ...
-    'LineWidth',1.2);
+    'LineWidth',1.3);
 
 hold on;
 
 plot( ...
     t, ...
     X(2,:), ...
-    'LineWidth',1.2);
+    'LineWidth',1.3);
 
 plot( ...
     t, ...
     X(3,:), ...
-    'LineWidth',1.2);
+    'LineWidth',1.3);
 
-yline( ...
-    ref(1), ...
-    '--');
-
-yline( ...
-    ref(2), ...
-    '--');
-
-yline( ...
-    ref(3), ...
-    '--');
+yline(ref(1),'--','r1');
+yline(ref(2),'--','r2');
+yline(ref(3),'--','r3');
 
 xlabel('Time [s]');
 
 ylabel('Water level [cm]');
 
-title( ...
-    'SAC Water Level Control');
+title('SAC Water Level Control');
 
 legend( ...
     'h1', ...
     'h2', ...
     'h3', ...
-    'r1', ...
-    'r2', ...
-    'r3');
+    'Location','best');
 
 grid on;
 
 %% ========================================
-% Plot pump commands
+% Plot 2: Pump commands
 % =========================================
 
 figure;
@@ -185,26 +188,97 @@ figure;
 plot( ...
     t, ...
     U(1,:), ...
-    'LineWidth',1.2);
+    'LineWidth',1.3);
 
 hold on;
 
 plot( ...
     t, ...
     U(2,:), ...
-    'LineWidth',1.2);
+    'LineWidth',1.3);
 
 xlabel('Time [s]');
 
 ylabel('Pump flow [ml/s]');
 
-title( ...
-    'SAC Control Inputs');
+title('SAC Pump Commands');
 
-legend( ...
-    'Q1', ...
-    'Q2');
+legend('Q1','Q2');
 
 ylim([0 90]);
 
 grid on;
+
+%% ========================================
+% Plot 3: Pump-rate changes
+% =========================================
+
+dU = diff(U,1,2);
+
+tdU = t(2:end);
+
+figure;
+
+plot( ...
+    tdU, ...
+    dU(1,:), ...
+    'LineWidth',1.2);
+
+hold on;
+
+plot( ...
+    tdU, ...
+    dU(2,:), ...
+    'LineWidth',1.2);
+
+xlabel('Time [s]');
+
+ylabel('\Delta Q [ml/s]');
+
+title('Pump Command Changes');
+
+legend('\Delta Q1','\Delta Q2');
+
+grid on;
+
+%% ========================================
+% Final values
+% =========================================
+
+fprintf('\n');
+fprintf('===== Final result =====\n');
+
+fprintf( ...
+    'Final h1 = %.3f cm, reference = %.3f cm\n', ...
+    X(1,end), ...
+    ref(1));
+
+fprintf( ...
+    'Final h2 = %.3f cm, reference = %.3f cm\n', ...
+    X(2,end), ...
+    ref(2));
+
+fprintf( ...
+    'Final h3 = %.3f cm, reference = %.3f cm\n', ...
+    X(3,end), ...
+    ref(3));
+
+fprintf('\n');
+
+fprintf( ...
+    'Final Q1 = %.3f ml/s\n', ...
+    U(1,end));
+
+fprintf( ...
+    'Final Q2 = %.3f ml/s\n', ...
+    U(2,end));
+
+fprintf('\n');
+
+fprintf( ...
+    'Maximum |Delta Q1| = %.3f ml/s\n', ...
+    max(abs(dU(1,:))));
+
+fprintf( ...
+    'Maximum |Delta Q2| = %.3f ml/s\n', ...
+    max(abs(dU(2,:))));

@@ -1,19 +1,26 @@
 function [InitialObservation, LoggedSignals] = resetFunction()
 
 %% ========================================
-% Initial condition
+% Initial water levels
 % =========================================
 
 x0 = [10;10;10];
 
-%% Desired water levels
+%% Desired reference
 
 ref = [30;10;20];
 
-%% Save environment information
+%% Save current state
 
 LoggedSignals.State = x0;
+
 LoggedSignals.Reference = ref;
+
+%% Previous physical pump command
+% Empty means:
+% do not penalize the very first control action
+
+LoggedSignals.PreviousAction = [];
 
 %% Initial tracking error
 
@@ -21,8 +28,6 @@ e0 = ref - x0;
 
 %% ========================================
 % Normalized observation
-%
-% Observation =
 %
 % [ h1/60
 %   h2/60
