@@ -24,7 +24,7 @@ Qmax = 85.0;
 
 TsPlant = 0.05;
 
-TsAgent = 0.5;
+TsAgent = 2;
 
 Tf = 200;
 

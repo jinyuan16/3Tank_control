@@ -49,7 +49,7 @@ disp("New SAC agent created.");
 % Timing
 % =========================================
 
-TsAgent = 0.5;
+TsAgent = 2;
 
 Tf = 200;
 

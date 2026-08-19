@@ -13,13 +13,11 @@ Qmax = 85.0;
 % Timing
 % =========================================
 
-% Physical tank simulation time
 TsPlant = 0.05;
 
-% RL controller update time
-TsAgent = 0.5;
+% RL action held for 2 seconds
+TsAgent = 2.0;
 
-% Number of plant steps per RL action
 Nsub = round(TsAgent/TsPlant);
 
 %% ========================================
@@ -31,9 +29,13 @@ x = LoggedSignals.State;
 ref = LoggedSignals.Reference;
 
 %% ========================================
+% Current tracking error BEFORE action
+% =========================================
+
+eOld = ref - x;
+
+%% ========================================
 % 1. SAC normalized action
-%
-% a1,a2 in [-1,1]
 % =========================================
 
 a = double(Action(:));
@@ -41,18 +43,13 @@ a = double(Action(:));
 a = min(max(a,-1),1);
 
 %% ========================================
-% 2. Convert normalized action
-%    to real pump flow
-%
-% a = -1 -> Q = 0
-% a =  0 -> Q = 42.5
-% a = +1 -> Q = 85
+% 2. Convert normalized action to pump flow
 % =========================================
 
 u = (Qmax/2)*(a + 1);
 
 %% ========================================
-% 3. Simulate tank for 0.5 seconds
+% 3. Simulate tank for one RL step
 % =========================================
 
 xNext = x;
@@ -67,85 +64,107 @@ for i = 1:Nsub
 end
 
 %% ========================================
-% 4. Tracking error
+% 4. New tracking error
 % =========================================
 
-e = ref - xNext;
+eNew = ref - xNext;
 
 %% ========================================
-% 5. Tracking cost
+% 5. Normalized errors
 % =========================================
 
-eNorm = e/20;
+% Error scale
+errorScale = 20;
 
-trackingCost = ...
-      eNorm(1)^2 ...
-    + eNorm(2)^2 ...
-    + eNorm(3)^2;
+eOldNorm = eOld/errorScale;
+eNewNorm = eNew/errorScale;
 
 %% ========================================
-% 6. Smoothness cost
+% 6. Absolute tracking cost
 %
-% We DO NOT penalize large pump values.
-% We only penalize sudden changes.
+% Small near reference
+% Large far from reference
 % =========================================
 
-if isempty(LoggedSignals.PreviousAction)
+trackingCost = sum(eNewNorm.^2);
 
-    % Do not penalize the first action
-    smoothCost = 0;
+%% ========================================
+% 7. Progress reward
+%
+% Positive if error becomes smaller
+% Negative if error becomes larger
+% =========================================
+
+oldCost = sum(eOldNorm.^2);
+newCost = sum(eNewNorm.^2);
+
+progressReward = oldCost - newCost;
+
+%% ========================================
+% 8. Near-reference bonus
+%% =========================================
+
+absError = abs(eNew);
+
+% Bonus if ALL tank errors are within 1 cm
+if all(absError < 1.0)
+
+    targetBonus = 2.0;
 
 else
 
-    uPrev = LoggedSignals.PreviousAction;
+    targetBonus = 0;
 
-    du = u - uPrev;
+end
 
-    duNorm = du/Qmax;
+% Larger bonus if extremely close
+if all(absError < 0.25)
 
-    % Smoothness weight
-    lambdaDu = 0.2;
-
-    smoothCost = ...
-        lambdaDu * sum(duNorm.^2);
+    targetBonus = targetBonus + 5.0;
 
 end
 
 %% ========================================
-% 7. Total reward
-% =========================================
+% 9. Total reward
+%
+% NO pump penalty
+% NO delta-u penalty
+%% =========================================
 
-Reward = -( ...
-    trackingCost ...
-    + smoothCost );
+lambdaTracking = 10;
+lambdaProgress = 50;
+
+Reward = ...
+    -lambdaTracking * trackingCost ...
+    +lambdaProgress * progressReward ...
+    +targetBonus;
 
 %% ========================================
-% 8. Save current pump input
-% =========================================
-
-LoggedSignals.PreviousAction = u;
-
-%% ========================================
-% 9. Next observation
-% =========================================
+% 10. Next observation
+%% =========================================
 
 NextObservation = [
     xNext/60;
-    e/30
+    eNew/30
 ];
 
 %% ========================================
-% 10. Save new state
-% =========================================
+% 11. Save new state
+%% =========================================
 
 LoggedSignals.State = xNext;
 
+%% PreviousAction is not needed anymore,
+% but keeping it does no harm.
+LoggedSignals.PreviousAction = u;
+
 %% ========================================
-% 11. Safety termination
-% =========================================
+% 12. Safety termination
+%% =========================================
 
 IsDone = ...
        any(xNext > 60) ...
+    || any(xNext < 0) ...
     || any(~isfinite(xNext));
 
 end
