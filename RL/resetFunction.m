@@ -1,41 +1,73 @@
 function [InitialObservation, LoggedSignals] = resetFunction()
 
 %% ========================================
-% Initial water levels
-% =========================================
+% Random initial state
+%
+% Requirements:
+%   10 <= h2 < h3 < h1 <= 50
+%   h1 - h2 <= 10
+%% ========================================
 
-x0 = [10;10;10];
+% Lowest level h2
+h2 = 10 + 30*rand;          % 10 ~ 40
 
-%% Desired reference
+% Total spread between h1 and h2
+gapH = 2 + 8*rand;          % 2 ~ 10
 
-ref = [30;10;20];
+% h3 lies between h2 and h1
+fractionH = 0.2 + 0.6*rand;
 
-%% Save current state
+h3 = h2 + fractionH*gapH;
+h1 = h2 + gapH;
+
+x0 = [
+    h1;
+    h2;
+    h3
+];
+
+%% ========================================
+% Random reference
+%
+% Same requirements:
+%   10 <= r2 < r3 < r1 <= 50
+%   r1 - r2 <= 10
+%% ========================================
+
+% Lowest reference r2
+r2 = 10 + 30*rand;          % 10 ~ 40
+
+% Total spread
+gapR = 2 + 8*rand;          % 2 ~ 10
+
+% r3 lies between r2 and r1
+fractionR = 0.2 + 0.6*rand;
+
+r3 = r2 + fractionR*gapR;
+r1 = r2 + gapR;
+
+ref = [
+    r1;
+    r2;
+    r3
+];
+
+%% ========================================
+% Store
+%% ========================================
 
 LoggedSignals.State = x0;
-
 LoggedSignals.Reference = ref;
 
-%% Previous physical pump command
-% Empty means:
-% do not penalize the very first control action
-
-LoggedSignals.PreviousAction = [];
-
-%% Initial tracking error
+%% ========================================
+% Initial tracking error
+%% ========================================
 
 e0 = ref - x0;
 
 %% ========================================
-% Normalized observation
-%
-% [ h1/60
-%   h2/60
-%   h3/60
-%   e1/30
-%   e2/30
-%   e3/30 ]
-% =========================================
+% Observation
+%% ========================================
 
 InitialObservation = [
     x0/60;
