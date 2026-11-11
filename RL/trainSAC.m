@@ -8,30 +8,21 @@ close all;
 
 obsInfo = rlNumericSpec([6 1]);
 
-obsInfo.Name = ...
-    "Normalized tank states and tracking errors";
+obsInfo.Name = "Normalized tank states and tracking errors";
 
 %% ========================================
 % Action specification
 % =========================================
 
-actInfo = rlNumericSpec( ...
-    [2 1], ...
-    LowerLimit=[-1;-1], ...
-    UpperLimit=[1;1]);
+actInfo = rlNumericSpec([2 1], LowerLimit=[-1;-1], UpperLimit=[1;1]);
 
-actInfo.Name = ...
-    "Normalized pump commands";
+actInfo.Name = "Normalized pump commands";
 
 %% ========================================
 % Create environment
 % =========================================
 
-env = rlFunctionEnv( ...
-    obsInfo, ...
-    actInfo, ...
-    @stepFunction, ...
-    @resetFunction);
+env = rlFunctionEnv(obsInfo, actInfo, @stepFunction, @resetFunction);
 
 disp("RL environment created.");
 
@@ -39,9 +30,7 @@ disp("RL environment created.");
 % Create a NEW SAC agent
 % =========================================
 
-agent = rlSACAgent( ...
-    obsInfo, ...
-    actInfo);
+agent = rlSACAgent(obsInfo, actInfo);
 
 disp("New SAC agent created.");
 
@@ -56,16 +45,11 @@ Tf = 200;
 maxSteps = round(Tf/TsAgent);
 
 fprintf( ...
-    "Episode duration: %.1f s\n", ...
-    Tf);
+    "Episode duration: %.1f s\n", Tf);
 
-fprintf( ...
-    "RL sample time: %.2f s\n", ...
-    TsAgent);
+fprintf("RL sample time: %.2f s\n", TsAgent);
 
-fprintf( ...
-    "Steps per episode: %d\n", ...
-    maxSteps);
+fprintf("Steps per episode: %d\n", maxSteps);
 
 %% ========================================
 % Training options
@@ -91,12 +75,10 @@ trainingStats = train( ...
 % Save controller
 % =========================================
 
-save( ...
-    "trainedSAC_realSmooth.mat", ...
+save("trainedSAC_realSmooth.mat", ...
     "agent", ...
     "trainingStats");
 
 disp("Training finished.");
 
-disp( ...
-    "Saved as trainedSAC_realSmooth.mat");
+disp("Saved as trainedSAC_realSmooth.mat");

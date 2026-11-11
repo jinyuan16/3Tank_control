@@ -6,9 +6,7 @@ close all;
 % Load trained SAC
 % =========================================
 
-load( ...
-    "trainedSAC_realSmooth.mat", ...
-    "agent");
+load("trainedSAC_realSmooth.mat", "agent");
 
 %% ========================================
 % Real calibrated parameters
@@ -82,16 +80,11 @@ for k = 1:N
 
         %% Normalized observation
 
-        obs = [
-            x/60;
-            e/30
-        ];
+        obs = [x/60; e/30];
 
         %% Get action
 
-        action = getAction( ...
-            agent, ...
-            {obs});
+        action = getAction(agent, {obs});
 
         %% Extract action
 
@@ -125,10 +118,7 @@ for k = 1:N
     % Plant simulation
     % =====================================
 
-    x = tankEnvironment( ...
-        x, ...
-        u, ...
-        az);
+    x = tankEnvironment(x, u, az);
 
 end
 
@@ -144,22 +134,13 @@ t = (0:N-1)*TsPlant;
 
 figure;
 
-plot( ...
-    t, ...
-    X(1,:), ...
-    'LineWidth',1.3);
+plot(t, X(1,:), 'LineWidth',1.3);
 
 hold on;
 
-plot( ...
-    t, ...
-    X(2,:), ...
-    'LineWidth',1.3);
+plot(t, X(2,:), 'LineWidth',1.3);
 
-plot( ...
-    t, ...
-    X(3,:), ...
-    'LineWidth',1.3);
+plot(t, X(3,:), 'LineWidth',1.3);
 
 yline(ref(1),'--','r1');
 yline(ref(2),'--','r2');
@@ -171,11 +152,7 @@ ylabel('Water level [cm]');
 
 title('SAC Water Level Control');
 
-legend( ...
-    'h1', ...
-    'h2', ...
-    'h3', ...
-    'Location','best');
+legend('h1', 'h2', 'h3', 'Location','best');
 
 grid on;
 
@@ -185,17 +162,11 @@ grid on;
 
 figure;
 
-plot( ...
-    t, ...
-    U(1,:), ...
-    'LineWidth',1.3);
+plot(t, U(1,:), 'LineWidth',1.3);
 
 hold on;
 
-plot( ...
-    t, ...
-    U(2,:), ...
-    'LineWidth',1.3);
+plot(t, U(2,:), 'LineWidth',1.3);
 
 xlabel('Time [s]');
 
@@ -219,17 +190,11 @@ tdU = t(2:end);
 
 figure;
 
-plot( ...
-    tdU, ...
-    dU(1,:), ...
-    'LineWidth',1.2);
+plot(tdU, dU(1,:), 'LineWidth',1.2);
 
 hold on;
 
-plot( ...
-    tdU, ...
-    dU(2,:), ...
-    'LineWidth',1.2);
+plot(tdU, dU(2,:), 'LineWidth',1.2);
 
 xlabel('Time [s]');
 
@@ -248,37 +213,20 @@ grid on;
 fprintf('\n');
 fprintf('===== Final result =====\n');
 
-fprintf( ...
-    'Final h1 = %.3f cm, reference = %.3f cm\n', ...
-    X(1,end), ...
-    ref(1));
+fprintf('Final h1 = %.3f cm, reference = %.3f cm\n', X(1,end), ref(1));
 
-fprintf( ...
-    'Final h2 = %.3f cm, reference = %.3f cm\n', ...
-    X(2,end), ...
-    ref(2));
+fprintf('Final h2 = %.3f cm, reference = %.3f cm\n', X(2,end), ref(2));
 
-fprintf( ...
-    'Final h3 = %.3f cm, reference = %.3f cm\n', ...
-    X(3,end), ...
-    ref(3));
+fprintf('Final h3 = %.3f cm, reference = %.3f cm\n', X(3,end), ref(3));
 
 fprintf('\n');
 
-fprintf( ...
-    'Final Q1 = %.3f ml/s\n', ...
-    U(1,end));
+fprintf('Final Q1 = %.3f ml/s\n', U(1,end));
 
-fprintf( ...
-    'Final Q2 = %.3f ml/s\n', ...
-    U(2,end));
+fprintf('Final Q2 = %.3f ml/s\n', U(2,end));
 
 fprintf('\n');
 
-fprintf( ...
-    'Maximum |Delta Q1| = %.3f ml/s\n', ...
-    max(abs(dU(1,:))));
+fprintf('Maximum |Delta Q1| = %.3f ml/s\n', max(abs(dU(1,:))));
 
-fprintf( ...
-    'Maximum |Delta Q2| = %.3f ml/s\n', ...
-    max(abs(dU(2,:))));
+fprintf('Maximum |Delta Q2| = %.3f ml/s\n', max(abs(dU(2,:))));
